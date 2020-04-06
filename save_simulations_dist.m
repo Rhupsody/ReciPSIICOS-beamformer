@@ -82,7 +82,7 @@ t = 1:T;
 Nmc = 500;
 
 Zp = zeros(2, length(d), Nmc, Nsites_red);
-Zpw = zeros(2, length(snr), Nmc, Nsites_red);
+Zpw = zeros(2, length(d), Nmc, Nsites_red);
 Zmne = zeros(2, length(d), Nmc, Nsites_red);
 Zbf = zeros(2, length(d), Nmc, Nsites_red);
 picked_src = zeros(Nmc, length(d), 2);
