@@ -17,12 +17,12 @@ Nch = length(ChUsed);
 % 2. REDUCING SENSOR SPACE for sparse matrix
 GainSVDTh = 0.001; % 0.05 results into 47 eigensensors and makes it run faster but produces less contrasting subcorr scans
                    % for a more reliable preformance use 0.01 to get all the sensor on board but be ready to wait;
-[ug sg vg] = spm_svd(G2d_red*G2d_red',GainSVDTh);
+[ug, sg, vg] = spm_svd(G2d_red*G2d_red',GainSVDTh);
 UP = ug'; % direction of dimention reduction
 G2dU_red = UP*G2d_red;
 G2d0U_red = UP*G2d0_red;
 
-[ug0 sg0 vg0] = spm_svd(G2d0*G2d0',GainSVDTh);
+[ug0, sg0, vg0] = spm_svd(G2d0*G2d0',GainSVDTh);
 
 G2d0U = ug0'*G2d0;
 
@@ -42,22 +42,27 @@ ind_right = find(R(:,2)<-0.01);
 RankG = size(G2d0U_red,1);
 
 % now find span of the target space
-bLoad = true;
-Nsrc = size(G2d0U_red,2)/2;
-Swp = zeros(4);
-Swp(2,3) = 1;
-Swp(3,2) = 1;
-Swp(1,1) = 1; 
-Swp(4,4) = 1;
-RankG = size(G2d0U_red,1);
 NSites = fix(size(G2d0U_red,2)/2);
-
+Wks =  load('C_re.mat','C_re');
+% this is correlation subspace correlation matrix
+Ccorr = Wks.C_re;
 
 % 4. PSIICOS projection for sparse matrix
 %[Upwr, ds, Apwr] = ProjectorOnlyAwayFromPowerComplete(G2d0U_red, 1500, 0);
-load("Upwr.mat") % using already calculated projector
 Rnk = 500;
-PrPwr = Upwr(:,1:500)*Upwr(:,1:500)';
+load("UpwrApwr.mat") % using already calculated projector
+
+Cpwr = Apwr*Apwr';
+Wpwr = sqrtm(inv(Cpwr+0.001*trace(Cpwr)/(RankG^2)*eye(size(Cpwr))));
+WCcorrW = Wpwr*double(Ccorr)*Wpwr';
+ProjRnkMax = 1280;
+[u, ~] = eigs(WCcorrW,ProjRnkMax);
+UcorrW_rnk = u(:,1:ProjRnkMax);
+[u, ~] = eigs(double(Ccorr),ProjRnkMax);
+Ucorr_rnk = u(:,1:ProjRnkMax);
+
+PrFromCorr_W = inv(Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))*(eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr;
+PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
 
 
 
@@ -75,13 +80,31 @@ T = Fs; % number of time points in one trial
 t = 1:T;
 Nmc = 500;
 
-Zp = zeros(2, length(corr), Nmc, Nsites_red);
-Zbf = zeros(2, length(corr), Nmc, Nsites_red);
+Zp = zeros(length(corr), Nmc, Nsites_red);
+Zpw = zeros(length(corr), Nmc, Nsites_red);
+Zmne = zeros(length(corr), Nmc, Nsites_red);
+Zbf = zeros(length(corr), Nmc, Nsites_red);
 picked_src = zeros(Nmc, 2);
 
-% load picked_src
+%Pre-computing MNE kernel
+Cs = eye(Nsites_red*2);
+Cn = eye(size(G2dU_red,1));
+GGt = G2dU_red*Cs*G2dU_red';
+lambda = 0.1;
+Wmne = G2dU_red'/(G2dU_red*Cs*G2dU_red'+lambda*trace(GGt)/size(GGt,1)*Cn);
+
 % load noise
 load('NoiseAveragedNormalized1.mat')
+
+% Example of noise generation
+%range = 1:T;
+%for tr = 1:Ntr
+%    Noise(:,range) = GenerateBrainNoise(G2d0,T,200,500,Fs);
+%    range = range+T;
+%end
+%Noise_av = mean(reshape(Noise,[Nch, T, Ntr]), 3); % average by trial
+%Noise_av_0 = Noise_av/norm(Noise_av); % normalized average noise
+
 far_sites = find(R(:,2)>0.02); % sources from left hemisphere >2 cm far from midline (6542/10001)
 for corr_i = 1:length(corr)
     range = 1:T;
@@ -93,8 +116,6 @@ end
 
 dd_sym = zeros(1, Nsites);
 for mc = 1:Nmc
-
-    % using pre-generated brain noise
     % generate signal for dense forward model matrix
 
     rand_idx = randperm(length(far_sites));
@@ -116,14 +137,17 @@ for mc = 1:Nmc
         
 		X = G2d0(:,picked_src_oriented(1))*S(1,:) + G2d0(:,picked_src_oriented(2))*S(1 + corr_i,:);
 		X_av = mean(reshape(X, [Nch, T, Ntr]), 3);
-
 		X_av_0 = X_av/norm(X_av);
+		% using pre-generated brain noise   Noise_av_0
 		Data  = snr*X_av_0 + Noise_av_0; % add noise to the data
 		Ca = UP*Data*Data'*UP'; % compute covariance in the virtual sensor space
 
 		% LCMV BF
-		Zbf(1, corr_i, mc, :) = lcmv(G2dU_red, Ca);
+		Zbf(corr_i, mc, :) = lcmv(G2dU_red, Ca);
 
+		% Minimum norm estimate
+        Zmne(corr_i, mc, :) = mne(Wmne, Ca);
+		
 		% ReciPSIICOS beamformer
 		Cap = reshape(PrPwr*Ca(:), size(Ca));
 		[e a] = eig(Cap);
@@ -135,20 +159,35 @@ for mc = 1:Nmc
 			g = G2dU_red(:,range2d);
 			m = inv(g'*iCap*g);
 			[u ss v] = svd(m);
-			Zp(1, corr_i, mc, i) = ss(1,1);
+			Zp(corr_i, mc, i) = ss(1,1);
+			range2d = range2d+2;
+		end
+		
+	% Whitened ReciPSIICOS beamformer
+		Cap =reshape(PrFromCorr_W*Ca(:), size(Ca));
+		[e, a] = eig(Cap);
+		Cap = e*abs(a)*e';
+		iCap = tihinv(Cap, 0.01);
+
+		range2d = 1:2;
+		for i=1:Nsites_red
+			g = G2dU_red(:,range2d);
+			m = inv(g'*iCap*g);
+			[u, ss, v] = svd(m);
+			Zpw(corr_i, mc, i) = ss(1,1);
 			range2d = range2d+2;
 		end
     end
     mc
 end
 
-Z_total = zeros(4, 2, length(d), Nmc, Nsites_red);
-Z_total(1, :, :, :, :) = Zp;
+Z_total = zeros(4, length(corr), Nmc, Nsites_red);
+Z_total(1, :, :, :) = Zp;
 disp "Zp done"
-Z_total(2, :, :, :, :) = Zpw;
+Z_total(2, :, :, :) = Zpw;
 disp "Zpw done"
-Z_total(3, :, :, :, :) = Zbf;
+Z_total(3, :, :, :) = Zbf;
 disp "Zbf done"
-Z_total(4, :, :, :, :) = Zmne;
+Z_total(4, :, :, :) = Zmne;
 save ZtotalCorr Z_total
 save pickedSrcCorr picked_src

@@ -98,7 +98,6 @@ for dN = 1:length(dSet)
                         for i = 1:size(coord_active_r,1)
                             dist_r(i) = norm(coord_active_r(i,:)-R_red(max_ind_r,:));
                         end
-% 
 
                         var(method, synch, dN, frac, mc) = (sum(Z_left_norm(Z_left_norm>0).*dist_l)+ ...
                             sum(Z_right_norm(Z_right_norm>0).*dist_r))/2;
