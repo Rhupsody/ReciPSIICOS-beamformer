@@ -1,6 +1,6 @@
 # ReciPSIICOS
 
-Data source: https://drive.google.com/drive/folders/1Behww7qRw2fMDG5jxIShGwfZRBUTSg2H?usp=sharing
+Data: https://drive.google.com/drive/folders/1Behww7qRw2fMDG5jxIShGwfZRBUTSg2H?usp=sharing Here you can find forward model sparse and reduced, channels, generated noise, C_re, Upwr and Apwr matrices for whitened ReciPSIICOS reconstruction.
 
 Simulations:
 
