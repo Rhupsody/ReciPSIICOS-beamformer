@@ -17,7 +17,7 @@ ChUsed = find(strcmp({chans.Channel.Type}, 'MEG GRAD')); % set to use gradiomete
 
 % Z_total = (method, corrN, mc, src)
 % methods: ReciPSIICOS, WReciPSIICOS, LCMV, MNE
-load('Z_totalCorr.mat');
+load('ZtotalCorr.mat');
 load('pickedSrcCorr.mat')
 
 src_left_red = find(R_red(:,2)>0);
@@ -34,7 +34,7 @@ end
 %hist(sqrt(val),100)
 
 corrSet = 0:0.11:1; % corr of sources
-Nmc = size(picked_src, 1);;
+Nmc = size(picked_src, 1);
 Range_frac = [0.65; 0.25];
 methodSet = 1:4;
 
@@ -46,7 +46,7 @@ for corrN = 1:length(corrSet)
 			for frac = 1:size(Range_frac, 2)
 				Z = squeeze(Z_total(method, corrN, mc, :))';
 				[max_val, max_ind] = max(Z);
-				Z(Z < Range_frac(synch, frac)*max_val) = 0;
+				Z(Z < Range_frac(1, frac)*max_val) = 0;
 	  
 				clear dist_l dist_r
 				Z_left = Z(src_left_red); % values from left hemisphere

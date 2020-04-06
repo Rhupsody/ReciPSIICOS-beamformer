@@ -79,7 +79,7 @@ srcF = 20; % sources frequency
 Ntr = 100; % number of simulated trials
 T = Fs; % number of time points in one trial
 t = 1:T;
-Nmc = 500;
+Nmc = 5;
 
 Zp = zeros(2, length(d), Nmc, Nsites_red);
 Zpw = zeros(2, length(d), Nmc, Nsites_red);
@@ -192,14 +192,14 @@ end
 
 Z_total = zeros(4, 2, length(d), Nmc, Nsites_red);
 Z_total(1, :, :, :, :) = Zp;
-disp "Zp done"
+disp("Zp done")
 Z_total(2, :, :, :, :) = Zpw;
-disp "Zpw done"
+disp("Zpw done")
 Z_total(3, :, :, :, :) = Zbf;
-disp "Zbf done"
+disp("Zbf done")
 Z_total(4, :, :, :, :) = Zmne;
-disp "Zmne done"
-save Z_totalDist Z_total
-disp "Z saved"
+disp("Zmne done")
+save ZtotalDist Z_total
+disp("Z saved")
 save pickedSrcDist picked_src
-disp "Sources saved"
+disp("Sources saved")

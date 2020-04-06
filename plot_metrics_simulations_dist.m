@@ -17,7 +17,7 @@ ChUsed = find(strcmp({chans.Channel.Type}, 'MEG GRAD')); % set to use gradiomete
 
 % Z_total = (method, synch, dN, mc, src)
 % methods: ReciPSIICOS, WReciPSIICOS, LCMV, MNE
-load('Z_totalDist.mat');
+load('ZtotalDist.mat');
 load('pickedSrcDist.mat')
 
 src_left_red = find(R_red(:,2)>0);

@@ -14,9 +14,9 @@ corrScale = [0, 1];
 figure
 subplot(3, 1, 1)
 hold on
-for i = 1:2:3
-    plot(corrSet, squeeze(mean_r(i,1,:)), 'Color', col(i,:), 'LineWidth', 3)
-    scatter(corrSet, squeeze(mean_r(i,1,:)), ...
+for i = methodSet
+    plot(corrSet, squeeze(mean_r(i,:)), 'Color', col(i,:), 'LineWidth', 3)
+    scatter(corrSet, squeeze(mean_r(i,:)), ...
     150, 'o', 'MarkerFaceColor', col(i,:), 'MarkerEdgeColor', 'k')
     ylim(rScale)
     xlim(corrScale)
@@ -29,9 +29,9 @@ ylabel('Meters, m')
 %Spreading area
 subplot(3, 1, 2)
 hold on
-for i = 1:2:3
-    plot(corrSet, squeeze(mean_var(i,1,:)), 'Color', col(i,:), 'LineWidth', 3)
-    scatter(corrSet, squeeze(mean_var(i,1,:)), ...
+for i = methodSet
+    plot(corrSet, squeeze(mean_var(i,:)), 'Color', col(i,:), 'LineWidth', 3)
+    scatter(corrSet, squeeze(mean_var(i,:)), ...
     150, 'o', 'MarkerFaceColor', col(i,:), 'MarkerEdgeColor', 'k')
     ylim(varScale)
     xlim(corrScale)
@@ -44,9 +44,9 @@ ylabel('Meters, m')
 %Detection ratio
 subplot(3, 1, 3)
 hold on
-for i = 1:2:3
-    plot(corrSet,(1-(squeeze(detect(i,1,:))./Nmc))*100, 'Color', col(i,:), 'LineWidth', 3)
-    scatter(corrSet, (1-(squeeze(detect(i,1,:))./Nmc))*100, ...
+for i = methodSet
+    plot(corrSet,(1-(squeeze(detect(i,:))./Nmc))*100, 'Color', col(i,:), 'LineWidth', 3)
+    scatter(corrSet, (1-(squeeze(detect(i,:))./Nmc))*100, ...
     150, 'o', 'MarkerFaceColor', col(i,:), 'MarkerEdgeColor', 'k')
     ylim(detectScale)
     xlim(corrScale)
