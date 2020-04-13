@@ -84,7 +84,7 @@ srcF = 20; % sources frequency
 Ntr = 100; % number of simulated trials
 T = Fs; % number of time points in one trial
 t = 1:T;
-Nmc = 250;
+Nmc = 50;
 
 Zp = zeros(2, length(d), Nmc, Nsites_red);
 Zpw = zeros(2, length(d), Nmc, Nsites_red);
@@ -144,7 +144,7 @@ for mc = 1:Nmc
         picked_src_oriented = picked_src(mc,:)*2;
         
 		range = 1:T; % activation functions
-		for tr = 1:Ntr
+        for tr = 1:Ntr
 			S(1,range) = sin(2*pi*srcF*t/Fs + randn*0.1);
 			range = range + T;
         end
@@ -176,7 +176,7 @@ for mc = 1:Nmc
                 g = G2dU_red(:,range2d);
                 m = inv(g'*iCap*g);
                 [u, ss, v] = svd(m);
-                Zp(snr_i, corr_i, mc, :) = ss(1,1);
+                Zp(snr_i, corr_i, mc, i) = ss(1,1);
                 range2d = range2d+2;
             end
             
