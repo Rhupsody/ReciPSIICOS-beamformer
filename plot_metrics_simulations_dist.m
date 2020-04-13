@@ -1,5 +1,8 @@
-%close all
-%clear all
+%%%%%
+% Aleksandra Kuznetsova,  Alexei Ossadtchi*, Grigoriy Mozgov
+% *ossadtchi@gmail.com
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % 1. FORWARD MODEL
 
 G3 = load('R0015_G.mat'); % forward model matrix 20002 sources

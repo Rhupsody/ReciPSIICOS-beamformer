@@ -1,3 +1,8 @@
+%%%%%
+% Aleksandra Kuznetsova,  Alexei Ossadtchi*, Grigoriy Mozgov
+% *ossadtchi@gmail.com
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % 1. FORWARD MODEL
 % for dense and sparse matrices
 

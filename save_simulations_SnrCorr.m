@@ -76,15 +76,15 @@ PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
 
 
 % 5. SIMULATIONS
-d = 0.005:0.005:0.09;
-snr = 4; % snr level in the data
-c = lines(7); % colors
+d = 0.04;
+snr = 0.5:0.25:1.5; % snr level in the data
+corr = 0:0.333:1;
 Fs = 500; % sampling frequency
 srcF = 20; % sources frequency
 Ntr = 100; % number of simulated trials
 T = Fs; % number of time points in one trial
 t = 1:T;
-Nmc = 5;
+Nmc = 250;
 
 Zp = zeros(2, length(d), Nmc, Nsites_red);
 Zpw = zeros(2, length(d), Nmc, Nsites_red);
@@ -114,15 +114,17 @@ load('NoiseAveragedNormalized1.mat')
 % For each distance compute set of all sources that are dist apart from midline(Y axis), with an error of 1mm
 dd = zeros(length(d), size(R, 1)); 
 for i = 1:length(d)
-	dSet = find((R(:, 2) > d(i)/2 - 0.001) & (R(:, 2) < d(i)/2 + 0.001));
+	dSet = find((R(:, 2) > d(i)/2 - 0.002) & (R(:, 2) < d(i)/2 + 0.002));
     dSet = cat(1, dSet, zeros(size(R, 1) - size(dSet, 1), 1)); %fill with zeros
     dd(i, :) = dSet;
 end
-range = 1:T; % activation functions
-for tr = 1:Ntr
-	S(2,range) = sin(2*pi*srcF*t/Fs + randn*0);
-	S(3,range) = cos(2*pi*srcF*t/Fs + randn*0);
-	range = range + T;
+
+for corr_i = 1:length(corr)
+    range = 1:T;
+	for tr = 1:Ntr
+		S(1 + corr_i,range) = sin(2*pi*srcF*t/Fs + (1 - corr(corr_i))* pi/2 + randn*0);
+		range = range + T;
+	end
 end
 
 dd_sym = zeros(1, Nsites);
@@ -132,34 +134,36 @@ for mc = 1:Nmc
     for dist_i = 1:length(d)
         % for random source in set find symmetrical source
         ddNonZero = find(dd(dist_i, :) ~= 0);
-        rand_idx = randperm(length(ddNonZero));  %Pick random source from the set of possible for reqiured distance
-        picked_src(mc, dist_i, 1) = dd(dist_i, rand_idx(1));  % pick the first source from the left hemisphere >2 cm far from midline
+        rand_idx = randperm(length(ddNonZero));  %Pick random source from the set of possible for required distance
+        picked_src(mc, 1) = dd(dist_i, rand_idx(1));  % pick the first source from the left hemisphere >2 cm far from midline
         clear dd_sym
         for i = 1:Nsites % find the symmetrical source
-            dd_sym(i) = norm([R(picked_src(mc, dist_i,1),1),-R(picked_src(mc, dist_i,1),2), R(picked_src(mc, dist_i,1),3)]-R(i,:));
+            dd_sym(i) = norm([R(picked_src(mc,1),1),-R(picked_src(mc,1),2), R(picked_src(mc,1),3)]-R(i,:));
         end
-        [val, picked_src(mc, dist_i,2)] = min(dd_sym);
-        picked_src_oriented = picked_src(mc, dist_i,:)*2;
+        [val, picked_src(mc,2)] = min(dd_sym);
+        picked_src_oriented = picked_src(mc,:)*2;
         
 		range = 1:T; % activation functions
 		for tr = 1:Ntr
 			S(1,range) = sin(2*pi*srcF*t/Fs + randn*0.1);
 			range = range + T;
-		end
-        for synch = 1:2
+        end
+        
+        for snr_i = 1:length(snr)
+        for corr_i = 1:length(corr)
             % Data generation
-            X = G2d0(:,picked_src_oriented(1))*S(1,:) + G2d0(:,picked_src_oriented(2))*S(synch+1,:);
+            X = G2d0(:,picked_src_oriented(1))*S(1,:) + G2d0(:,picked_src_oriented(2))*S(1 + corr_i,:);
             X_av = mean(reshape(X, [Nch, T, Ntr]), 3);
             X_av_0 = X_av/norm(X_av);
             % using pre-generated brain noise   Noise_av_0
-            Data  = snr*X_av_0 + Noise_av_0; % add noise to the data
+            Data  = snr(snr_i)*X_av_0 + Noise_av_0; % add noise to the data
             Ca = UP*Data*Data'*UP'; % compute covariance in the virtual sensor space
 
             % LCMV BF
-            Zbf(synch, dist_i, mc, :) = lcmv(G2dU_red, Ca);
+            Zbf(snr_i, corr_i, mc, :) = lcmv(G2dU_red, Ca);
             
             % Minimum norm estimate
-            Zmne(synch, dist_i, mc, :) = mne(Wmne, Ca);
+            %Zmne(synch, dist_i, mc, :) = mne(Wmne, Ca);
 
             % ReciPSIICOS beamformer
             Cap = reshape(PrPwr*Ca(:), size(Ca));
@@ -172,39 +176,42 @@ for mc = 1:Nmc
                 g = G2dU_red(:,range2d);
                 m = inv(g'*iCap*g);
                 [u, ss, v] = svd(m);
-                Zp(synch, dist_i, mc, i) = ss(1,1);
+                Zp(snr_i, corr_i, mc, :) = ss(1,1);
                 range2d = range2d+2;
             end
             
             % Whitened ReciPSIICOS beamformer
-            Cap =reshape(PrFromCorr_W*Ca(:), size(Ca));
-            [e, a] = eig(Cap);
-            Cap = e*abs(a)*e';
-            iCap = tihinv(Cap, 0.01);
+            %Cap =reshape(PrFromCorr_W*Ca(:), size(Ca));
+            %[e, a] = eig(Cap);
+            %Cap = e*abs(a)*e';
+            %iCap = tihinv(Cap, 0.01);
 
-            range2d = 1:2;
-            for i=1:Nsites_red
-                g = G2dU_red(:,range2d);
-                m = inv(g'*iCap*g);
-                [u, ss, v] = svd(m);
-                Zpw(synch, dist_i, mc, i) = ss(1,1);
-                range2d = range2d+2;
-            end
+            %range2d = 1:2;
+            %for i=1:Nsites_red
+            %    g = G2dU_red(:,range2d);
+            %    m = inv(g'*iCap*g);
+            %    [u, ss, v] = svd(m);
+            %    Zpw(synch, dist_i, mc, i) = ss(1,1);
+            %    range2d = range2d+2;
+            %end
+        end
         end
     end
     mc %#ok<NOPTS>
 end
 
-Z_total = zeros(4, 2, length(d), Nmc, Nsites_red);
+Z_total = zeros(4, length(snr), length(corr), Nmc, Nsites_red);
 Z_total(1, :, :, :, :) = Zp;
 disp("Zp done")
-Z_total(2, :, :, :, :) = Zpw;
-disp("Zpw done")
+%Z_total(2, :, :, :, :) = Zpw;
+%disp("Zpw done")
 Z_total(3, :, :, :, :) = Zbf;
 disp("Zbf done")
-Z_total(4, :, :, :, :) = Zmne;
-disp("Zmne done")
-save ZtotalDist Z_total
+%Z_total(4, :, :, :, :) = Zmne;
+%disp("Zmne done")
+save ZtotalSnrCorr Z_total
 disp("Z saved")
-save pickedSrcDist picked_src
+save pickedSrcSnrCorr picked_src
 disp("Sources saved")
+
+plot_metrics_simulations_SnrCorr

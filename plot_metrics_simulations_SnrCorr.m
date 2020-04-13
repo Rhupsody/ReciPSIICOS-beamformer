@@ -3,25 +3,27 @@
 % *ossadtchi@gmail.com
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%close all
+%clear all
 % 1. FORWARD MODEL
 
-G3 = load('R0015_G.mat'); % forward model matrix 20002 sources
-G3_red = load('RR015_G_5k.mat'); % reduced forward model matrix 5001 sources
-chans = load('R0015_chans.mat'); % channels
+%G3 = load('R0015_G.mat'); % forward model matrix 20002 sources
+%G3_red = load('RR015_G_5k.mat'); % reduced forward model matrix 5001 sources
+%chans = load('R0015_chans.mat'); % channels
 
-R = G3.GridLoc; % source location, dense matrix
-R_red = G3_red.GridLoc; % source location reduced matrix
-ChUsed = find(strcmp({chans.Channel.Type}, 'MEG GRAD')); % set to use gradiometers only
+%R = G3.GridLoc; % source location, dense matrix
+%R_red = G3_red.GridLoc; % source location reduced matrix
+%ChUsed = find(strcmp({chans.Channel.Type}, 'MEG GRAD')); % set to use gradiometers only
 
-[~, Nsites] = size(G3.Gain(ChUsed,1:3:end));
-[Nch, Nsites_red] = size(G3_red.Gain(ChUsed,1:3:end));
+%[~, Nsites] = size(G3.Gain(ChUsed,1:3:end));
+%[Nch, Nsites_red] = size(G3_red.Gain(ChUsed,1:3:end));
 
 % 2. SIMULATIONS 
 
 % Z_total = (method, corrN, mc, src)
 % methods: ReciPSIICOS, WReciPSIICOS, LCMV, MNE
-load('ZtotalCorr.mat');
-load('pickedSrcCorr.mat')
+%load('ZtotalSnrCorr.mat');
+%load('pickedSrcSnrCorr.mat')
 
 src_left_red = find(R_red(:,2)>0);
 src_right_red = find(R_red(:,2)<0);
@@ -36,18 +38,20 @@ for i = 1:size(picked_src, 1)
 end
 %hist(sqrt(val),100)
 
-corrSet = 0:0.11:1; % corr of sources
+snrSet = 0.5:0.25:1.5;
+corrSet = 0:0.333:1;
 Nmc = size(picked_src, 1);
 Range_frac = [0.65; 0.25];
-methodSet = 1:4;
+methodSet = 1:2:3;
 
 %clear r var
+for snrN = 1:length(snrSet)
 for corrN = 1:length(corrSet)
     for mc = 1:Nmc
         ind_generated = picked_src(mc, :);
 		for method = methodSet
 			for frac = 1:size(Range_frac, 2)
-				Z = squeeze(Z_total(method, corrN, mc, :))';
+				Z = squeeze(Z_total(method, snrN, corrN, mc, :))';
 				[max_val, max_ind] = max(Z);
 				Z(Z < Range_frac(1, frac)*max_val) = 0;
 	  
@@ -61,32 +65,32 @@ for corrN = 1:length(corrSet)
 	
 
 				if (length(Z_left(Z_left>0)) == 0)|(length(Z_right(Z_right>0)) == 0)
-					r(method, corrN, frac, mc) = NaN;
-					var(method, corrN, frac, mc) = NaN;
-					r_red(method, corrN, frac, mc) = NaN;
+					r(method, snrN, corrN, frac, mc) = NaN;
+					var(method, snrN, corrN, frac, mc) = NaN;
+					r_red(method, snrN, corrN, frac, mc) = NaN;
 				   
-					xyz_vec_trueL(method, corrN, frac, mc, :) = [NaN, NaN, NaN];
-					xyz_vec_estL(method, corrN, frac, mc, :) =   [NaN, NaN, NaN];
-					xyz_vec_trueR(method, corrN, frac, mc, :) = [NaN, NaN, NaN];
-					xyz_vec_estR(method, corrN, frac, mc, :) =   [NaN, NaN, NaN];
+					xyz_vec_trueL(method, snrN, corrN, frac, mc, :) = [NaN, NaN, NaN];
+					xyz_vec_estL(method, snrN, corrN, frac, mc, :) =   [NaN, NaN, NaN];
+					xyz_vec_trueR(method, snrN, corrN, frac, mc, :) = [NaN, NaN, NaN];
+					xyz_vec_estR(method, snrN, corrN, frac, mc, :) =   [NaN, NaN, NaN];
 				else
 					
 					d = R_red - R(ind_generated(1),:);
 					[~, ind_generated_red(1)] = min(sum (d.*d,2));
 					d = R_red - R(ind_generated(2),:);
-					[~, ind_generated_red(2)] = min(sum (d.*d,2));;
+					[~, ind_generated_red(2)] = min(sum (d.*d,2));
 					
-					r_red(method, corrN, frac, mc) = (norm(R_red(max_ind_l,:)-R_red(ind_generated_red(1),:))+ ...
+					r_red(method, snrN, corrN, frac, mc) = (norm(R_red(max_ind_l,:)-R_red(ind_generated_red(1),:))+ ...
 						norm(R_red(max_ind_r,:)-R_red(ind_generated_red(2),:)))/2;
 					
-					r(method, corrN, frac, mc) = (norm(R_red(max_ind_l,:)-R(ind_generated(1),:))+ ...
+					r(method, snrN, corrN, frac, mc) = (norm(R_red(max_ind_l,:)-R(ind_generated(1),:))+ ...
 						norm(R_red(max_ind_r,:)-R(ind_generated(2),:)))/2;
 			   
-					xyz_vec_trueL(method, corrN, frac, mc,:) = R(ind_generated(1),:) ;
-					xyz_vec_estL(method, corrN, frac, mc,:) =  R_red(max_ind_l,:);
+					xyz_vec_trueL(method, snrN, corrN, frac, mc,:) = R(ind_generated(1),:) ;
+					xyz_vec_estL(method, snrN, corrN, frac, mc,:) =  R_red(max_ind_l,:);
 				  
-					xyz_vec_trueR(method, corrN, frac, mc,:) = R(ind_generated(2),:) ;
-					xyz_vec_estR(method, corrN, frac, mc,:) =  R_red(max_ind_r,:);
+					xyz_vec_trueR(method, snrN, corrN, frac, mc,:) = R(ind_generated(2),:) ;
+					xyz_vec_estR(method, snrN, corrN, frac, mc,:) =  R_red(max_ind_r,:);
 					
 					Z_left_norm = Z_left./sum(Z_left);
 					Z_right_norm = Z_right./sum(Z_right);
@@ -101,15 +105,16 @@ for corrN = 1:length(corrSet)
 						dist_r(i) = norm(coord_active_r(i,:)-R_red(max_ind_r,:));
 					end
 					
-					var(method, corrN, frac, mc) = (sum(Z_left_norm(Z_left_norm>0).*dist_l)+ ...
+					var(method, snrN, corrN, frac, mc) = (sum(Z_left_norm(Z_left_norm>0).*dist_l)+ ...
 						sum(Z_right_norm(Z_right_norm>0).*dist_r))/2;
 				end
 			end
 		end      
-        mc
+        %mc
     end
     currentCorrelation = corrSet(corrN)
 end
+end
 
-CorrPlot
+SnrCorrPlot
 
