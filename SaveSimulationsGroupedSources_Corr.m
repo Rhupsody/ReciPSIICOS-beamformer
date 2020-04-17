@@ -48,13 +48,12 @@ RankG = size(G2d0U_red,1);
 
 % now find span of the target space
 NSites = fix(size(G2d0U_red,2)/2);
-Wks =  load('C_re70.mat','C_re');
+Wks =  load('C_re.mat','C_re');
 % this is correlation subspace correlation matrix
 Ccorr = Wks.C_re;
    
 % 4. PSIICOS projection for sparse matrix
 %[Upwr, ds, Apwr] = ProjectorOnlyAwayFromPowerComplete(G2d0U_red, 1500, 0);
-%save("UpwrApwr70", "Upwr", "Apwr")
 Rnk = 500;
 load("UpwrApwr70.mat") % using already calculated projector
 
@@ -67,20 +66,6 @@ UcorrW_rnk = u(:,1:ProjRnkMax);
 [u, ~] = eigs(double(Ccorr),ProjRnkMax);
 Ucorr_rnk = u(:,1:ProjRnkMax);
 
-PrFromCorr70_W = inv(Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))*(eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr;
-PrPwr70 = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
-
-Wks =  load('C_re.mat','C_re');
-Ccorr = Wks.C_re;
-load("UpwrApwr.mat")
-Cpwr = Apwr*Apwr';
-Wpwr = sqrtm(inv(Cpwr+0.001*trace(Cpwr)/(RankG^2)*eye(size(Cpwr))));
-WCcorrW = Wpwr*double(Ccorr)*Wpwr';
-ProjRnkMax = 1280;
-[u, ~] = eigs(WCcorrW,ProjRnkMax);
-UcorrW_rnk = u(:,1:ProjRnkMax);
-[u, ~] = eigs(double(Ccorr),ProjRnkMax);
-Ucorr_rnk = u(:,1:ProjRnkMax);
 PrFromCorr_W = inv(Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))*(eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr;
 PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
 
@@ -89,23 +74,27 @@ PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
 
 
 
+
 % 5. SIMULATIONS
-d = 0.1;
-snr = 0.5:0.25:3; % snr level in the data
-corr = 0.6:0.1:0.9;
+d = 0.04; % distance between main sources, in meters
+dAdd = 0.04; % distance between main and additional sources in group
+mainCorr = [1, 0.1]; % correlation between 2 main sources
+corr = 0.9:-0.1:0.5; % correlation bertween main sources and additional
+snr = 2; % snr level in the data
+Ngr = 2; % number of groups
+N = 1; % number of additional sources in each group
 Fs = 500; % sampling frequency
 srcF = 20; % sources frequency
 Ntr = 100; % number of simulated trials
 T = Fs; % number of time points in one trial
 t = 1:T;
-Nmc = 200;
+Nmc = 200; % simulations amount
 
-%Zp = zeros(2, length(d), Nmc, Nsites_red);
-%Zpw = zeros(2, length(d), Nmc, Nsites_red);
-%Zmne = zeros(2, length(d), Nmc, Nsites_red);
-%Zbf = zeros(2, length(d), Nmc, Nsites_red);
-Z_total = zeros(5, length(snr), length(corr), Nmc, Nsites_red);
-picked_src = zeros(Nmc, 2);
+Ztotal = zeros(4, length(snr), length(corr), Nmc, Nsites_red);
+% 1st parameter is method number:
+% 1 — ReciPSIICOS, 2 — wRP, 3 — LCMV. 4 — MNE.
+pickedSrc = zeros(Nmc, Ngr);
+pickedAddSrc = zeros(Nmc, Ngr, N);
 
 %Pre-computing MNE kernel
 Cs = eye(Nsites_red*2);
@@ -134,10 +123,16 @@ for i = 1:length(d)
     dd(i, :) = dSet;
 end
 
-for corr_i = 1:length(corr)
+S = zeros(Ngr, T * Ntr); % main sources oscillations data
+SN = zeros(Ngr, N, length(corr), T * Ntr); % additional sources oscillations data
+for corrN = 1:length(corr)
     range = 1:T;
 	for tr = 1:Ntr
-		S(1 + corr_i,range) = sin(2*pi*srcF*t/Fs + (1 - corr(corr_i))* pi/2 + randn*0);
+        for src = 1:Ngr
+        for addSrc = 1:N
+            SN(src, addSrc, corrN, range) = sin(2*pi*srcF*t/Fs + (1 - corr(corrN) + 1 - mainCorr(src))* pi/2);
+        end
+        end
 		range = range + T;
 	end
 end
@@ -146,39 +141,59 @@ dd_sym = zeros(1, Nsites);
 for mc = 1:Nmc
     % generate signal for dense forward model matrix
     
-    for dist_i = 1:length(d)
+    for distN = 1:length(d)
         % for random source in set find symmetrical source
-        ddNonZero = find(dd(dist_i, :) ~= 0);
-        rand_idx = randperm(length(ddNonZero));  %Pick random source from the set of possible for required distance
-        picked_src(mc, 1) = dd(dist_i, rand_idx(1));  % pick the first source from the left hemisphere >2 cm far from midline
+        ddNonZero = find(dd(distN, :) ~= 0);
+        rand_idx = randperm(length(ddNonZero));  % pick random source from the set of possible for required distance
+        pickedSrc(mc, 1) = dd(distN, rand_idx(1));
         clear dd_sym
-        for i = 1:Nsites % find the symmetrical source
-            dd_sym(i) = norm([R(picked_src(mc,1),1),-R(picked_src(mc,1),2), R(picked_src(mc,1),3)]-R(i,:));
+        for i = 1:Nsites % find symmetrical source
+            dd_sym(i) = norm([R(pickedSrc(mc,1),1),-R(pickedSrc(mc,1),2), R(pickedSrc(mc,1),3)]-R(i,:));
         end
-        [val, picked_src(mc,2)] = min(dd_sym);
-        picked_src_oriented = picked_src(mc,:)*2;
+        [val, pickedSrc(mc, 2)] = min(dd_sym);
+        pickedSrcOriented = pickedSrc(mc,:)*2;
+        
+        % Generate location of additional sources  with the distance 
+        % equal to dAdd away from the according main source
+        for src = 1:Ngr
+            curR = R(pickedSrc(mc, src), :);
+            dSetAdd = find(abs(vecnorm(R(:, :) - curR) - dAdd) < 0.001);
+            for addSrc = 1:N
+                randIndSet = randperm(length(dSetAdd));
+                pickedAddSrc(mc, src, addSrc) = dSetAdd(randIndSet(1));
+            end
+        end
+        pickedAddSrcOriented = pickedAddSrc(mc, :, :) * 2;
         
 		range = 1:T; % activation functions
         for tr = 1:Ntr
-			S(1,range) = sin(2*pi*srcF*t/Fs + randn*0.1);
+            for i = 1:Ngr
+                S(i, range) = sin(2*pi*srcF*t/Fs + (1 - mainCorr(i)) * pi/2 + randn*0.1);
+            end
 			range = range + T;
         end
         
-        for snr_i = 1:length(snr)
-        for corr_i = 1:length(corr)
+        for snrN = 1:length(snr)
+        for corrN = 1:length(corr)
             % Data generation
-            X = G2d0(:,picked_src_oriented(1))*S(1,:) + G2d0(:,picked_src_oriented(2))*S(1 + corr_i,:);
+            X = zeros(Nch, T * Ntr);
+            for src = 1:Ngr
+                X = X + G2d0(:, pickedSrcOriented(src)) * S(src, :);
+                for addSrc = 1:N
+                    X = X + G2d0(:, pickedAddSrcOriented(src, addSrc)) * SN(src, addSrc, corrN, :);
+                end
+            end
             X_av = mean(reshape(X, [Nch, T, Ntr]), 3);
             X_av_0 = X_av/norm(X_av);
             % using pre-generated brain noise   Noise_av_0
-            Data  = snr(snr_i)*X_av_0 + Noise_av_0; % add noise to the data
+            Data  = snr(snrN)*X_av_0 + Noise_av_0; % add noise to the data
             Ca = UP*Data*Data'*UP'; % compute covariance in the virtual sensor space
 
             % LCMV BF
-            Z_total(3, snr_i, corr_i, mc, :) = lcmv(G2dU_red, Ca);
+            Ztotal(3, snrN, corrN, mc, :) = lcmv(G2dU_red, Ca);
             
             % Minimum norm estimate
-            %Zmne(synch, dist_i, mc, :) = mne(Wmne, Ca);
+            %Z_total(4, synch, dist_i, mc, :) = mne(Wmne, Ca);
 
             % ReciPSIICOS beamformer
             Cap = reshape(PrPwr*Ca(:), size(Ca));
@@ -191,27 +206,12 @@ for mc = 1:Nmc
                 g = G2dU_red(:,range2d);
                 m = inv(g'*iCap*g);
                 [u, ss, v] = svd(m);
-                Z_total(1, snr_i, corr_i, mc, i) = ss(1,1);
-                range2d = range2d+2;
-            end
-            
-            % ReciPSIICOS2 beamformer
-            Cap = reshape(PrPwr70*Ca(:), size(Ca));
-            [e, a] = eig(Cap);
-            Cap = e*abs(a)*e';
-            iCap = tihinv(Cap, 0.01);
-
-            range2d = 1:2;
-            for i=1:Nsites_red
-                g = G2dU_red(:,range2d);
-                m = inv(g'*iCap*g);
-                [u, ss, v] = svd(m);
-                Z_total(5, snr_i, corr_i, mc, i) = ss(1,1);
+                Ztotal(1, snrN, corrN, mc, i) = ss(1,1);
                 range2d = range2d+2;
             end
             
             % Whitened ReciPSIICOS beamformer
-            Cap =reshape(PrFromCorr_W*Ca(:), size(Ca));
+            Cap = reshape(PrFromCorr_W*Ca(:), size(Ca));
             [e, a] = eig(Cap);
             Cap = e*abs(a)*e';
             iCap = tihinv(Cap, 0.01);
@@ -221,22 +221,7 @@ for mc = 1:Nmc
                 g = G2dU_red(:,range2d);
                 m = inv(g'*iCap*g);
                 [u, ss, v] = svd(m);
-                Z_total(2, snr_i, corr_i, mc, i) = ss(1,1);
-                range2d = range2d+2;
-            end
-            
-            % Whitened2 ReciPSIICOS beamformer
-            Cap =reshape(PrFromCorr70_W*Ca(:), size(Ca));
-            [e, a] = eig(Cap);
-            Cap = e*abs(a)*e';
-            iCap = tihinv(Cap, 0.01);
-
-            range2d = 1:2;
-            for i=1:Nsites_red
-                g = G2dU_red(:,range2d);
-                m = inv(g'*iCap*g);
-                [u, ss, v] = svd(m);
-                Z_total(4, snr_i, corr_i, mc, i) = ss(1,1);
+                Ztotal(2, snrN, corrN, mc, i) = ss(1,1);
                 range2d = range2d+2;
             end
         end
@@ -245,21 +230,12 @@ for mc = 1:Nmc
     mc %#ok<NOPTS>
 end
 
-%Z_total = zeros(4, length(snr), length(corr), Nmc, Nsites_red);
-%Z_total(1, :, :, :, :) = Zp;
-%disp("Zp done")
-%Z_total(4, :, :, :, :) = Zpw;
-%disp("Zpw done")
-%Z_total(3, :, :, :, :) = Zbf;
-%disp("Zbf done")
-%Z_total(4, :, :, :, :) = Zmne;
-%disp("Zmne done")
 dateName = datestr(now,'DD-mm-YY HH-MM-SS');
-ZFname = "ZtotalSnrCorr " + dateName;
-srcFname = "pickedSrcSnrCorr " + dateName;
-save(ZFname, "Z_total")
+ZFname = "ZtotalGrpsCorr " + dateName;
+srcFname = "pickedSrcGrpsCorr " + dateName;
+save(ZFname, "Ztotal")
 disp("Z saved")
-save(srcFname, "picked_src")
+save(srcFname, "pickedSrc")
 disp("Sources saved")
 
-plot_metrics_simulations_SnrCorr
+%plot_metrics_simulations_SnrCorr

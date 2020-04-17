@@ -10,8 +10,8 @@ mean_var = mean(var, 5, 'omitnan');
 c = lines(7);
 col = c([1, 6, 2, 4], :);
 fntSize = 12;
-rScale = [0, 0.12];
-varScale = [0, 0.12];
+rScale = [0, 0.07];
+varScale = [0, 0.03];
 detectScale = [60, 100];
 YScale = [snrSet(1) - 0.25, snrSet(length(snrSet)) + 0.25];
 dim = length(corrSet);
@@ -19,7 +19,7 @@ figure
 
 %Localization bias
 for n = 1:dim
-    subplot(3, dim, n)
+    subplot(3, dim,5 - n)
     hold on
     for i = methodSet
         plot(snrSet, squeeze(mean_r(i, :, n)), 'Color', col(i,:), 'LineWidth', 3)
@@ -28,7 +28,6 @@ for n = 1:dim
         ylim(rScale)
         xlim(YScale)
     end
-    %plot([4, 4], [0 0.07], '--', 'Color', 'k')
     set(gca,'FontSize', fntSize)
     xlabel('SNR')
     ylabel('Meters, m')
@@ -36,7 +35,7 @@ end
 
 %Spreading area
 for n = 1:dim
-    subplot(3, dim, dim + n)
+    subplot(3, dim, dim + 5 - n)
     hold on
     for i = methodSet
         plot(snrSet, squeeze(mean_var(i, :, n)), 'Color', col(i,:), 'LineWidth', 3)
@@ -46,14 +45,13 @@ for n = 1:dim
         xlim(YScale)
     end
     set(gca,'FontSize', fntSize)
-    %plot([4, 4], [0 0.03], '--', 'Color', 'k')
     xlabel('SNR')
     ylabel('Meters, m')
 end
 
 %Detection ratio
 for n = 1:dim
-    subplot(3, dim, 2*dim + n)
+    subplot(3, dim, 2*dim + 5 - n)
     hold on
     for i = methodSet
         plot(snrSet,(1-(squeeze(detect(i, :, n))./Nmc))*100, 'Color', col(i,:), 'LineWidth', 3)
@@ -62,7 +60,6 @@ for n = 1:dim
         ylim(detectScale)
         xlim(YScale)
     end
-    %plot([4, 4], [60 100], '--', 'Color', 'k')
     set(gca,'FontSize', fntSize)
     xlabel('SNR')
     ylabel('Percents, %')

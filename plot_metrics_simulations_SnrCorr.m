@@ -20,13 +20,13 @@
 
 % 2. SIMULATIONS 
 
-% Z_total = (method, corrN, mc, src)
+% Z_total = (method, snrN, corrN, mc, src)
 % methods: ReciPSIICOS, WReciPSIICOS, LCMV, MNE
-%load('ZtotalSnrCorr.mat');
-%load('pickedSrcSnrCorr.mat')
+%load('ZtotalSnrCorr-14-Apr-2020_1');
+%load('pickedSrcSnrCorr-14-Apr-2020 squeezed.mat')
 
-src_left_red = find(R_red(:,2)>0);
-src_right_red = find(R_red(:,2)<0);
+src_left_red = find(R_red(:, 2)>0);
+src_right_red = find(R_red(:, 2)<0);
 
 % assess the distance between the original and the sparse grids
 clear val;
@@ -38,11 +38,11 @@ for i = 1:size(picked_src, 1)
 end
 %hist(sqrt(val),100)
 
-snrSet = 0.5:0.25:1.5;
+snrSet = 0.5:0.25:3;
 corrSet = 0:0.333:1;
 Nmc = size(picked_src, 1);
 Range_frac = [0.65; 0.25];
-methodSet = 1:2:3;
+methodSet = 1:5;
 
 %clear r var
 for snrN = 1:length(snrSet)
@@ -112,9 +112,13 @@ for corrN = 1:length(corrSet)
 		end      
         %mc
     end
-    currentCorrelation = corrSet(corrN)
+    %currentCorrelation = corrSet(corrN)
 end
+currentSnr = snrSet(snrN)
 end
 
+dateName = datestr(now,'DD-mm-YY HH-MM-SS');
+rFname = "r and var " + dateName;
+save(rFname, "r", "var")
 SnrCorrPlot
 
