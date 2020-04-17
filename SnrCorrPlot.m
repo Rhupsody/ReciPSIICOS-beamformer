@@ -19,7 +19,7 @@ figure
 
 %Localization bias
 for n = 1:dim
-    subplot(3, dim,5 - n)
+    subplot(3, dim, n)
     hold on
     for i = methodSet
         plot(snrSet, squeeze(mean_r(i, :, n)), 'Color', col(i,:), 'LineWidth', 3)
@@ -35,7 +35,7 @@ end
 
 %Spreading area
 for n = 1:dim
-    subplot(3, dim, dim + 5 - n)
+    subplot(3, dim, dim + n)
     hold on
     for i = methodSet
         plot(snrSet, squeeze(mean_var(i, :, n)), 'Color', col(i,:), 'LineWidth', 3)
@@ -51,7 +51,7 @@ end
 
 %Detection ratio
 for n = 1:dim
-    subplot(3, dim, 2*dim + 5 - n)
+    subplot(3, dim, 2*dim + n)
     hold on
     for i = methodSet
         plot(snrSet,(1-(squeeze(detect(i, :, n))./Nmc))*100, 'Color', col(i,:), 'LineWidth', 3)

@@ -67,22 +67,6 @@ UcorrW_rnk = u(:,1:ProjRnkMax);
 [u, ~] = eigs(double(Ccorr),ProjRnkMax);
 Ucorr_rnk = u(:,1:ProjRnkMax);
 
-PrFromCorr70_W = inv(Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))*(eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr;
-PrPwr70 = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
-
-clear Upwr;
-clear Apwr;
-Wks =  load('C_re.mat','C_re');
-Ccorr = Wks.C_re;
-load("UpwrApwr.mat")
-Cpwr = Apwr*Apwr';
-Wpwr = sqrtm(inv(Cpwr+0.001*trace(Cpwr)/(RankG^2)*eye(size(Cpwr))));
-WCcorrW = Wpwr*double(Ccorr)*Wpwr';
-ProjRnkMax = 1280;
-[u, ~] = eigs(WCcorrW,ProjRnkMax);
-UcorrW_rnk = u(:,1:ProjRnkMax);
-[u, ~] = eigs(double(Ccorr),ProjRnkMax);
-Ucorr_rnk = u(:,1:ProjRnkMax);
 PrFromCorr_W = inv(Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))*(eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr;
 PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
 
@@ -94,8 +78,8 @@ clear Upwr;
 clear Apwr;
 % 5. SIMULATIONS
 d = 0.1;
-snr = 0.5:0.25:3; % snr level in the data
-corr = 0.6:0.1:0.9;
+snr = 0.5:0.25:2.25; % snr level in the data
+corr = 0.9:-0.1:0.6;
 Fs = 500; % sampling frequency
 srcF = 20; % sources frequency
 Ntr = 100; % number of simulated trials
@@ -107,7 +91,7 @@ Nmc = 200;
 %Zpw = zeros(2, length(d), Nmc, Nsites_red);
 %Zmne = zeros(2, length(d), Nmc, Nsites_red);
 %Zbf = zeros(2, length(d), Nmc, Nsites_red);
-Z_total = zeros(5, length(snr), length(corr), Nmc, Nsites_red);
+Z_total = zeros(3, length(snr), length(corr), Nmc, Nsites_red);
 picked_src = zeros(Nmc, 2);
 
 %Pre-computing MNE kernel
@@ -198,21 +182,6 @@ for mc = 1:Nmc
                 range2d = range2d+2;
             end
             
-            % ReciPSIICOS2 beamformer
-            Cap = reshape(PrPwr70*Ca(:), size(Ca));
-            [e, a] = eig(Cap);
-            Cap = e*abs(a)*e';
-            iCap = tihinv(Cap, 0.01);
-
-            range2d = 1:2;
-            for i=1:Nsites_red
-                g = G2dU_red(:,range2d);
-                m = inv(g'*iCap*g);
-                [u, ss, v] = svd(m);
-                Z_total(5, snr_i, corr_i, mc, i) = ss(1,1);
-                range2d = range2d+2;
-            end
-            
             % Whitened ReciPSIICOS beamformer
             Cap =reshape(PrFromCorr_W*Ca(:), size(Ca));
             [e, a] = eig(Cap);
@@ -225,21 +194,6 @@ for mc = 1:Nmc
                 m = inv(g'*iCap*g);
                 [u, ss, v] = svd(m);
                 Z_total(2, snr_i, corr_i, mc, i) = ss(1,1);
-                range2d = range2d+2;
-            end
-            
-            % Whitened2 ReciPSIICOS beamformer
-            Cap =reshape(PrFromCorr70_W*Ca(:), size(Ca));
-            [e, a] = eig(Cap);
-            Cap = e*abs(a)*e';
-            iCap = tihinv(Cap, 0.01);
-
-            range2d = 1:2;
-            for i=1:Nsites_red
-                g = G2dU_red(:,range2d);
-                m = inv(g'*iCap*g);
-                [u, ss, v] = svd(m);
-                Z_total(4, snr_i, corr_i, mc, i) = ss(1,1);
                 range2d = range2d+2;
             end
         end

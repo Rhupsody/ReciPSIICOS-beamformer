@@ -38,11 +38,11 @@ for i = 1:size(picked_src, 1)
 end
 %hist(sqrt(val),100)
 
-snrSet = 0.5:0.25:3;
-corrSet = 0:0.333:1;
+snrSet = 0.5:0.25:2.25;
+corrSet = 0.9:-0.1:0.6;
 Nmc = size(picked_src, 1);
 Range_frac = [0.65; 0.25];
-methodSet = 1:5;
+methodSet = 1:3;
 
 %clear r var
 for snrN = 1:length(snrSet)
