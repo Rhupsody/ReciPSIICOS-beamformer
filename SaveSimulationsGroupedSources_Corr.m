@@ -2,7 +2,7 @@
 % Aleksandra Kuznetsova,  Alexei Ossadtchi*, Grigoriy Mozgov
 % *ossadtchi@gmail.com
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+tic
 % 1. FORWARD MODEL
 % for dense and sparse matrices
 
@@ -15,10 +15,12 @@ R_red = G3_red.GridLoc; % source location reduced matrix
 ChUsed = find(strcmp({chans.Channel.Type}, 'MEG GRAD')); % set to use gradiometers only
 Nch = length(ChUsed);
 
-[G2d, G2d0, Nsites,V] = G3toG2_aux(G3, ChUsed);
+[G2d, G2d0, Nsites, V] = G3toG2_aux(G3, ChUsed);
 [G2d_red, G2d0_red, Nsites_red] = G3toG2(G3_red, ChUsed);
 
 
+
+clear ("G3", "G3_red", "G2d")
 % 2. REDUCING SENSOR SPACE for sparse matrix
 GainSVDTh = 0.0001; % 0.05 results into 47 eigensensors and makes it run faster but produces less contrasting subcorr scans
                    % for a more reliable preformance use 0.01 to get all the sensor on board but be ready to wait;
@@ -27,30 +29,33 @@ UP = ug'; % direction of dimention reduction
 G2dU_red = UP*G2d_red;
 G2d0U_red = UP*G2d0_red;
 
-[ug0, sg0, vg0] = spm_svd(G2d0*G2d0',GainSVDTh);
+%[ug0, sg0, vg0] = spm_svd(G2d0*G2d0',GainSVDTh);
 
-G2d0U = ug0'*G2d0;
+%G2d0U = ug0'*G2d0;
 
-G2d0U2 = G2d0U(:,1:2:end);
-G2d02 = G2d0(:,2:2:end);
-V2 = V(:,2:2:end);
-
-
-ind_left = find(R(:,2)>0.01);
-ind_right = find(R(:,2)<-0.01);
+%G2d0U2 = G2d0U(:,1:2:end);
+%G2d02 = G2d0(:,2:2:end);
+%V2 = V(:,2:2:end);
 
 
+%ind_left = find(R(:,2)>0.01);
+%ind_right = find(R(:,2)<-0.01);
 
 
 
+
+clear("sg", "vg")
+time12 = toc %#ok<NOPTS>
+tic
 % 3. PROJECTION MATRICES
 RankG = size(G2d0U_red,1);
 
 % now find span of the target space
 NSites = fix(size(G2d0U_red,2)/2);
-Wks =  load('C_re.mat','C_re');
+Wks =  load('C_re70.mat','C_re');
 % this is correlation subspace correlation matrix
 Ccorr = Wks.C_re;
+clear Wks
    
 % 4. PSIICOS projection for sparse matrix
 %[Upwr, ds, Apwr] = ProjectorOnlyAwayFromPowerComplete(G2d0U_red, 1500, 0);
@@ -66,7 +71,7 @@ UcorrW_rnk = u(:,1:ProjRnkMax);
 [u, ~] = eigs(double(Ccorr),ProjRnkMax);
 Ucorr_rnk = u(:,1:ProjRnkMax);
 
-PrFromCorr_W = inv(Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))*(eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr;
+PrFromCorr_W = (Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))\((eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr);
 PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
 
 
@@ -74,7 +79,8 @@ PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
 
 
 
-
+clear("Upwr", "Apwr", "Cpwr", "Wpwr", "Ccorr", "WCcorrW", "UcorrW_rnk", "Ucorr_rnk", "G2d0U_red", "G2d_red", "G2d0_red")
+time34 = toc %#ok<NOPTS>
 % 5. SIMULATIONS
 d = 0.04; % distance between main sources, in meters
 dAdd = 0.04; % distance between main and additional sources in group
@@ -88,7 +94,7 @@ srcF = 20; % sources frequency
 Ntr = 100; % number of simulated trials
 T = Fs; % number of time points in one trial
 t = 1:T;
-Nmc = 200; % simulations amount
+Nmc = 3; % simulations amount
 
 Ztotal = zeros(4, length(snr), length(corr), Nmc, Nsites_red);
 % 1st parameter is method number:
@@ -97,11 +103,11 @@ pickedSrc = zeros(Nmc, Ngr);
 pickedAddSrc = zeros(Nmc, Ngr, N);
 
 %Pre-computing MNE kernel
-Cs = eye(Nsites_red*2);
-Cn = eye(size(G2dU_red,1));
-GGt = G2dU_red*Cs*G2dU_red';
-lambda = 0.1;
-Wmne = G2dU_red'/(G2dU_red*Cs*G2dU_red'+lambda*trace(GGt)/size(GGt,1)*Cn);
+%Cs = eye(Nsites_red*2);
+%Cn = eye(size(G2dU_red,1));
+%GGt = G2dU_red*Cs*G2dU_red';
+%lambda = 0.1;
+%Wmne = G2dU_red'/(G2dU_red*Cs*G2dU_red'+lambda*trace(GGt)/size(GGt,1)*Cn);
 
 % load noise
 load('NoiseAveragedNormalized1.mat')
@@ -137,7 +143,7 @@ for corrN = 1:length(corr)
 	end
 end
 
-dd_sym = zeros(1, Nsites);
+tic
 for mc = 1:Nmc
     % generate signal for dense forward model matrix
     
@@ -146,7 +152,7 @@ for mc = 1:Nmc
         ddNonZero = find(dd(distN, :) ~= 0);
         rand_idx = randperm(length(ddNonZero));  % pick random source from the set of possible for required distance
         pickedSrc(mc, 1) = dd(distN, rand_idx(1));
-        clear dd_sym
+        dd_sym = zeros(1, Nsites);
         for i = 1:Nsites % find symmetrical source
             dd_sym(i) = norm([R(pickedSrc(mc,1),1),-R(pickedSrc(mc,1),2), R(pickedSrc(mc,1),3)]-R(i,:));
         end
@@ -155,15 +161,16 @@ for mc = 1:Nmc
         
         % Generate location of additional sources  with the distance 
         % equal to dAdd away from the according main source
+        pickedAddSrc = zeros(Nmc, Ngr, N);
         for src = 1:Ngr
             curR = R(pickedSrc(mc, src), :);
-            dSetAdd = find(abs(vecnorm(R(:, :) - curR) - dAdd) < 0.001);
+            dSetAdd = find(abs(vecnorm([R(:, 1), R(:, 2), R(:, 3)]' - curR') - dAdd) < 0.001);
             for addSrc = 1:N
                 randIndSet = randperm(length(dSetAdd));
                 pickedAddSrc(mc, src, addSrc) = dSetAdd(randIndSet(1));
             end
         end
-        pickedAddSrcOriented = pickedAddSrc(mc, :, :) * 2;
+        pickedAddSrcOriented = squeeze(pickedAddSrc(mc, :, :)) * 2;
         
 		range = 1:T; % activation functions
         for tr = 1:Ntr
@@ -180,7 +187,13 @@ for mc = 1:Nmc
             for src = 1:Ngr
                 X = X + G2d0(:, pickedSrcOriented(src)) * S(src, :);
                 for addSrc = 1:N
-                    X = X + G2d0(:, pickedAddSrcOriented(src, addSrc)) * SN(src, addSrc, corrN, :);
+                    if (N ~= 1) && (Ngr ~= 1)
+                        X = X + G2d0(:, pickedAddSrcOriented(src, addSrc)) * squeeze(SN(src, addSrc, corrN, :))';
+                    elseif N == 1
+                        X = X + G2d0(:, pickedAddSrcOriented(src)) * squeeze(SN(src, addSrc, corrN, :))';
+                    elseif Ngr == 1
+                        X = X + G2d0(:, pickedAddSrcOriented(addSrc)) * squeeze(SN(src, addSrc, corrN, :))';
+                    end
                 end
             end
             X_av = mean(reshape(X, [Nch, T, Ntr]), 3);
@@ -228,6 +241,9 @@ for mc = 1:Nmc
         end
     end
     mc %#ok<NOPTS>
+    if mc == 2
+        time2Mc = toc %#ok<NOPTS>
+    end
 end
 
 dateName = datestr(now,'DD-mm-YY HH-MM-SS');
@@ -235,7 +251,8 @@ ZFname = "ZtotalGrpsCorr " + dateName;
 srcFname = "pickedSrcGrpsCorr " + dateName;
 save(ZFname, "Ztotal")
 disp("Z saved")
-save(srcFname, "pickedSrc")
+save(srcFname, "pickedSrc", "pickedAddSrc")
 disp("Sources saved")
 
+clear ("S", "SN")
 %plot_metrics_simulations_SnrCorr
