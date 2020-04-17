@@ -70,6 +70,8 @@ Ucorr_rnk = u(:,1:ProjRnkMax);
 PrFromCorr70_W = inv(Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))*(eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr;
 PrPwr70 = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
 
+clear Upwr;
+clear Apwr;
 Wks =  load('C_re.mat','C_re');
 Ccorr = Wks.C_re;
 load("UpwrApwr.mat")
@@ -88,7 +90,8 @@ PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
 
 
 
-
+clear Upwr;
+clear Apwr;
 % 5. SIMULATIONS
 d = 0.1;
 snr = 0.5:0.25:3; % snr level in the data
