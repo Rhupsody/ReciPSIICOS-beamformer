@@ -15,7 +15,7 @@ R_red = G3_red.GridLoc; % source location reduced matrix
 ChUsed = find(strcmp({chans.Channel.Type}, 'MEG GRAD')); % set to use gradiometers only
 Nch = length(ChUsed);
 
-[G2d, G2d0, Nsites, V] = G3toG2_aux(G3, ChUsed);
+[G2d, G2d0, Nsites, ~] = G3toG2_aux(G3, ChUsed);
 [G2d_red, G2d0_red, Nsites_red] = G3toG2(G3_red, ChUsed);
 
 
@@ -52,40 +52,41 @@ RankG = size(G2d0U_red,1);
 
 % now find span of the target space
 NSites = fix(size(G2d0U_red,2)/2);
-Wks =  load('C_re70.mat','C_re');
+%Wks =  load('C_re70.mat','C_re');
 % this is correlation subspace correlation matrix
-Ccorr = Wks.C_re;
+%Ccorr = Wks.C_re;
 clear Wks
    
 % 4. PSIICOS projection for sparse matrix
 %[Upwr, ds, Apwr] = ProjectorOnlyAwayFromPowerComplete(G2d0U_red, 1500, 0);
-Rnk = 500;
-load("UpwrApwr70.mat") % using already calculated projector
+%Rnk = 500;
+%load("UpwrApwr70.mat") % using already calculated projector
 
-Cpwr = Apwr*Apwr';
-Wpwr = sqrtm(inv(Cpwr+0.001*trace(Cpwr)/(RankG^2)*eye(size(Cpwr))));
-WCcorrW = Wpwr*double(Ccorr)*Wpwr';
-ProjRnkMax = 1280;
-[u, ~] = eigs(WCcorrW,ProjRnkMax);
-UcorrW_rnk = u(:,1:ProjRnkMax);
-[u, ~] = eigs(double(Ccorr),ProjRnkMax);
-Ucorr_rnk = u(:,1:ProjRnkMax);
+%Cpwr = Apwr*Apwr';
+%Wpwr = sqrtm(inv(Cpwr+0.001*trace(Cpwr)/(RankG^2)*eye(size(Cpwr))));
+%WCcorrW = Wpwr*double(Ccorr)*Wpwr';
+%ProjRnkMax = 1280;
+%[u, ~] = eigs(WCcorrW,ProjRnkMax);
+%UcorrW_rnk = u(:,1:ProjRnkMax);
+%[u, ~] = eigs(double(Ccorr),ProjRnkMax);
+%Ucorr_rnk = u(:,1:ProjRnkMax);
 
-PrFromCorr_W = (Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))\((eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr);
-PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
-
-
-
-
-
-
+%PrFromCorr_W = (Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))\((eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr);
+%PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
+load("PrPwr PrFromCorr.mat")
 clear("Upwr", "Apwr", "Cpwr", "Wpwr", "Ccorr", "WCcorrW", "UcorrW_rnk", "Ucorr_rnk", "G2d0U_red", "G2d_red", "G2d0_red")
 time34 = toc %#ok<NOPTS>
+
+
+
+
+
+
 % 5. SIMULATIONS
 d = 0.04; % distance between main sources, in meters
 dAdd = 0.04; % distance between main and additional sources in group
 mainCorr = [1, 0.1]; % correlation between 2 main sources
-corr = 0.9:-0.1:0.5; % correlation bertween main sources and additional
+corr = 0.9:-0.1:0.1; % correlation bertween main sources and additional
 snr = 2; % snr level in the data
 Ngr = 2; % number of groups
 N = 1; % number of additional sources in each group
@@ -94,7 +95,7 @@ srcF = 20; % sources frequency
 Ntr = 100; % number of simulated trials
 T = Fs; % number of time points in one trial
 t = 1:T;
-Nmc = 3; % simulations amount
+Nmc = 500; % simulations amount
 
 Ztotal = zeros(4, length(snr), length(corr), Nmc, Nsites_red);
 % 1st parameter is method number:
@@ -143,7 +144,7 @@ for corrN = 1:length(corr)
 	end
 end
 
-tic
+
 for mc = 1:Nmc
     % generate signal for dense forward model matrix
     
@@ -161,7 +162,6 @@ for mc = 1:Nmc
         
         % Generate location of additional sources  with the distance 
         % equal to dAdd away from the according main source
-        pickedAddSrc = zeros(Nmc, Ngr, N);
         for src = 1:Ngr
             curR = R(pickedSrc(mc, src), :);
             dSetAdd = find(abs(vecnorm([R(:, 1), R(:, 2), R(:, 3)]' - curR') - dAdd) < 0.001);
@@ -241,9 +241,6 @@ for mc = 1:Nmc
         end
     end
     mc %#ok<NOPTS>
-    if mc == 2
-        time2Mc = toc %#ok<NOPTS>
-    end
 end
 
 dateName = datestr(now,'DD-mm-YY HH-MM-SS');
@@ -252,7 +249,8 @@ srcFname = "pickedSrcGrpsCorr " + dateName;
 save(ZFname, "Ztotal")
 disp("Z saved")
 save(srcFname, "pickedSrc", "pickedAddSrc")
-disp("Sources saved")
+paramName = "paramsSnrCorr " + dateName;
+save(paramName, "Nmc", "corr", "d", "snr")
 
-clear ("S", "SN")
-%plot_metrics_simulations_SnrCorr
+clear ("S", "SN", "X")
+PlotMetricsGroupedSimulations_Corr
