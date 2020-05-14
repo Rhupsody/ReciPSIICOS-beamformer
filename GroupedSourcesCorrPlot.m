@@ -65,7 +65,7 @@ for n = 1:dim
     ylabel('Percents, %')
 end
 
-%legend(lol, "ReciPSIICOS", "wReciPSIICOS", "LCMV")
+%legend(lol, "ReciPSIICOS", "LCMV")
 
 % Localization bias histogram for sources with 0.55 correlation
 % ReciPSIICOS beamformer

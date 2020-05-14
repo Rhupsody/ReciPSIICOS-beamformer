@@ -25,6 +25,8 @@
 %load('ZtotalSnrCorr-14-Apr-2020_1');
 %load('pickedSrcSnrCorr-14-Apr-2020 squeezed.mat')
 
+R_red = R; %using sparse matrix
+
 src_left_red = find(R_red(:, 2)>0);
 src_right_red = find(R_red(:, 2)<0);
 
@@ -32,7 +34,7 @@ snrSet = 2;
 corrSet = 0.9:-0.1:0.1;
 Nmc = size(pickedSrc, 1);
 Range_frac = [0.65; 0.25];
-methodSet = 1:3;
+methodSet = 1:2:3;
 
 %clear("r", "var")
 for snrN = 1:length(snrSet)
