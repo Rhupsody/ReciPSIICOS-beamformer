@@ -1,11 +1,12 @@
 %%%%%
-% Aleksandra Kuznetsova,  Alexei Ossadtchi*, Grigoriy Mozgov
+% Aleksandra Kuznetsova,  Alexei Ossadtchi*
 % *ossadtchi@gmail.com
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 detect = sum(isnan(r), 5);
 mean_r = mean(r, 5, 'omitnan');
 mean_var = mean(var, 5, 'omitnan');
+% These matrices will be squeezed to matrix with dimensions (method, SNR, correlations), with methods in rows and SNR in columns on plot. Since there is a single SNR in simulation there will be 1 column.
 
 c = lines(7);
 col = c([1, 6, 2, 4], :);

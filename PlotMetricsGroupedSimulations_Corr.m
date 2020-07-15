@@ -1,5 +1,5 @@
 %%%%%
-% Aleksandra Kuznetsova,  Alexei Ossadtchi*, Grigoriy Mozgov
+% Aleksandra Kuznetsova,  Alexei Ossadtchi*
 % *ossadtchi@gmail.com
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -109,8 +109,8 @@ end
 currentSnr = snrSet(snrN)
 end
 
-dateName = datestr(now,'DD-mm-YY HH-MM-SS');
-rFname = "r and var " + dateName;
-save(rFname, "r", "var")
+%dateName = datestr(now,'DD-mm-YY HH-MM-SS'); for debugging
+%rFname = "r and var " + dateName;
+%save(rFname, "r", "var")
 GroupedSourcesCorrPlot
 

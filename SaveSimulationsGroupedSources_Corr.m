@@ -1,5 +1,5 @@
 %%%%%
-% Aleksandra Kuznetsova,  Alexei Ossadtchi*, Grigoriy Mozgov
+% Aleksandra Kuznetsova,  Alexei Ossadtchi*
 % *ossadtchi@gmail.com
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tic
@@ -20,10 +20,13 @@ Nch = length(ChUsed);
 
 
 
-clear ("G3", "G3_red")
+%clear ("G3", "G3_red")
 % 2. REDUCING SENSOR SPACE for sparse matrix
 GainSVDTh = 0.0001; % 0.05 results into 47 eigensensors and makes it run faster but produces less contrasting subcorr scans
                    % for a more reliable preformance use 0.01 to get all the sensor on board but be ready to wait;
+				   % 0.001 gives dimension equal to 50, 0.0001 dim=70
+				   
+% In these simulations we use dense matrix, so G2dU is used instead of G2dU_red. Change matrices accordingly when you want to use sparse matrix.
 %[ugRed, sgRed, vgRed] = spm_svd(G2d_red*G2d_red',GainSVDTh);
 %UP = ugRed'; % direction of dimention reduction
 %G2dU_red = UP*G2d_red;
@@ -34,9 +37,9 @@ UP = ug'; % direction of dimention reduction
 G2dU = UP*G2d;
 G2d0U = UP*G2d0;
 
-%[ug0, sg0, vg0] = spm_svd(G2d0*G2d0',GainSVDTh);
+[ug0, sg0, vg0] = spm_svd(G2d0*G2d0',GainSVDTh);
 
-%G2d0U = ug0'*G2d0;
+G2d0U = ug0'*G2d0;
 
 %G2d0U2 = G2d0U(:,1:2:end);
 %G2d02 = G2d0(:,2:2:end);
@@ -57,31 +60,31 @@ RankG = size(G2d0U, 1);
 
 % now find span of the target space
 NSites = fix(size(G2d0U,2)/2);
-%Wks =  load('C_re70.mat','C_re');
+Wks =  load('C_re70.mat','C_re'); %These matrix was calculated for sparse matrix, so to use whitened ReciPSIICOS with dense sensor matrix this matrix need to be recalculated.
 % this is correlation subspace correlation matrix
-%Ccorr = Wks.C_re;
+Ccorr = Wks.C_re;
 clear Wks
    
 % 4. PSIICOS projection for sparse matrix
-%[Upwr, ds, Apwr] = ProjectorOnlyAwayFromPowerComplete(G2d0U, 1500, 0);
-%Rnk = 500;
+[Upwr, ds, Apwr] = ProjectorOnlyAwayFromPowerComplete(G2d0U, 1500, 0);
+Rnk = 500;
 %load("UpwrApwr70Sparse.mat") % using already calculated projector
 
-%Cpwr = Apwr*Apwr';  %For whitenedReciPSIICOS
-%Wpwr = sqrtm(inv(Cpwr+0.001*trace(Cpwr)/(RankG^2)*eye(size(Cpwr))));
-%WCcorrW = Wpwr*double(Ccorr)*Wpwr';
-%ProjRnkMax = 1280;
-%[u, ~] = eigs(WCcorrW,ProjRnkMax);
-%UcorrW_rnk = u(:,1:ProjRnkMax);
-%[u, ~] = eigs(double(Ccorr),ProjRnkMax);
-%Ucorr_rnk = u(:,1:ProjRnkMax);
+Cpwr = Apwr*Apwr';  %For whitenedReciPSIICOS
+Wpwr = sqrtm(inv(Cpwr+0.001*trace(Cpwr)/(RankG^2)*eye(size(Cpwr))));
+WCcorrW = Wpwr*double(Ccorr)*Wpwr';
+ProjRnkMax = 1280;
+[u, ~] = eigs(WCcorrW,ProjRnkMax);
+UcorrW_rnk = u(:,1:ProjRnkMax);
+[u, ~] = eigs(double(Ccorr),ProjRnkMax);
+Ucorr_rnk = u(:,1:ProjRnkMax);
 
-%PrFromCorr_W = (Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))\((eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr);
-%PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
+PrFromCorr_W = (Wpwr+0.05*trace(Wpwr)/size(Wpwr,1))\((eye(size(UcorrW_rnk,1))-UcorrW_rnk(:,1:500)*UcorrW_rnk(:,1:500)')*Wpwr);
+PrPwr = Upwr(:,1:Rnk)*Upwr(:,1:Rnk)';
 %load("PrPwr PrFromCorr.mat")
-load("PrPwr sparse.mat")
-clear("Upwr", "Apwr")
-clear("Cpwr", "Wpwr", "Ccorr", "WCcorrW", "UcorrW_rnk", "Ucorr_rnk", "G2d0U_red", "G2d_red", "G2d0_red")
+%load("PrPwr sparse.mat")
+%clear("Upwr", "Apwr")
+%clear("Cpwr", "Wpwr", "Ccorr", "WCcorrW", "UcorrW_rnk", "Ucorr_rnk", "G2d0U_red", "G2d_red", "G2d0_red")
 time34 = toc %#ok<NOPTS>
 
 
@@ -102,7 +105,7 @@ srcF = 20; % sources frequency
 Ntr = 100; % number of simulated trials
 T = Fs; % number of time points in one trial
 t = 1:T;
-Nmc = 10; % simulations amount
+Nmc = 500; % simulations amount. 50 is too low to even test hypothesis, 200 usually gives inaccurate results but is okay to use for quicker testing,  it's recommended to use 500.
 
 Ztotal = zeros(4, length(snr), length(corr), Nmc, Nsites);
 % 1st parameter is method number:
@@ -194,7 +197,7 @@ for mc = 1:Nmc
             for src = 1:Ngr
                 X = X + G2d0(:, pickedSrcOriented(src)) * S(src, :);
                 for addSrc = 1:N
-                    if (N ~= 1) && (Ngr ~= 1)
+                    if (N ~= 1) && (Ngr ~= 1)  % These conditions are checks for situations when one of matrix dimeonsions is equal to 1 and matlab can't handle multiplication correctly when that happens
                         X = X + G2d0(:, pickedAddSrcOriented(src, addSrc)) * squeeze(SN(src, addSrc, corrN, :))';
                     elseif N == 1
                         X = X + G2d0(:, pickedAddSrcOriented(src)) * squeeze(SN(src, addSrc, corrN, :))';
@@ -210,48 +213,22 @@ for mc = 1:Nmc
             Ca = UP*Data*Data'*UP'; % compute covariance in the virtual sensor space
 
             % Vector LCMV BF
-            %Ztotal(3, snrN, corrN, mc, :) = vectorLCMV(G2dU, Ca);
+            Ztotal(3, snrN, corrN, mc, :) = vectorLCMV(G2dU, Ca);
             
             % Minimum norm estimate
             %Ztotal(4, snrN, corrN, mc, :) = mne(Wmne, Ca);
-            
-            % Scalar LCMV beamformer
-            Ztotal(3, snrN, corrN, mc, :) = scalarLCMV(G2dU, Ca);
 
             % ReciPSIICOS beamformer
             Cap = reshape(PrPwr*Ca(:), size(Ca));
             [e, a] = eig(Cap);
             Cap = e*abs(a)*e';
-            Ztotal(1, snrN, corrN, mc, :) = scalarLCMV(G2dU, Cap);
-            %iCap = tihinv(Cap, 0.01);
-
-            %range2d = 1:2;
-            %for i=1:Nsites
-            %    g = G2dU(:,range2d);
-            %    w = (iCap * g) / (g' * iCap * g);
-            %    m = inv(w' * Cap * w);
-            %    %vector m = inv(g'*iCap*g);
-            %    [u, ss, v] = svd(m);
-            %    Ztotal(1, snrN, corrN, mc, i) = ss(1,1);
-            %    range2d = range2d+2;
-            %end
-            
+            Ztotal(1, snrN, corrN, mc, :) = vectorLCMV(G2dU, Cap);
+                        
             % Whitened ReciPSIICOS beamformer
             %Cap = reshape(PrFromCorr_W*Ca(:), size(Ca));
             %[e, a] = eig(Cap);
             %Cap = e*abs(a)*e';
-            %iCap = tihinv(Cap, 0.01);
-
-            %range2d = 1:2;
-            %for i=1:Nsites_red
-            %    g = G2dU_red(:,range2d);
-            %    w = (iCap * g) / (g' * iCap * g);
-            %    m = inv(w' * Cap * w);
-                %vector m = inv(g'*iCap*g);
-            %    [u, ss, v] = svd(m);
-            %    Ztotal(2, snrN, corrN, mc, i) = ss(1,1);
-            %    range2d = range2d+2;
-            %end
+            %Ztotal(2, snrN, corrN, mc, :) = vectorLCMV(G2dU, Cap);
         end
         end
     end
