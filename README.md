@@ -17,4 +17,4 @@ Simulations:
 	3. Grouped Sources correlations:
 		3.1 SaveSimulationsGroupedSources_Corr.m — Generate simulations for N=2 sources we will call main and Ngr=2 additional for each main source, which we will call paired. Simulations are generated for different methods and different correlation between main and paired sources. Resulting activation maps are saved at "ZtotalGrpsCorr DD-mm-YY HH-MM-SS.mat", and source locations at "pickedSrcGrpsCorr DD-mm-YY HH-MM-SS.mat". Uses dense sensor matrix.
 		3.2 PlotMetricsGroupedSimulations_Corr.m — Calculate point spreading and bias for precomputed ZtotalGrpsCorr and pickedSrcGrpsCorr and draw them on a graph.
-			3.2.1 CorrPlot.m — sub function that plots calculated point spreading, bias and detection. Can't be used alone, it is useful to seperate it from PlotMetricsGroupedSimulations_Corr.m for convenient debug.
+			3.2.1 GroupedSourcesCorrPlot.m — sub function that plots calculated point spreading, bias and detection. Can't be used alone, it is useful to seperate it from PlotMetricsGroupedSimulations_Corr.m for convenient debug.
